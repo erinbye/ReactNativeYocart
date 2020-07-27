@@ -1,0 +1,11 @@
+YoCart!
+Easy meal planner and grocery list
+
+To run:
+- make sure Node.js is installed https://nodejs.org/en/download/
+- open command line
+    - npm install -g expo-cli (not sure if you need this step, but just to make sure)
+    - cd {projectName} (opens the project after cloning it)
+    - npm start
+
+You can either run the app in a browser or get the Expo client app on your iOS or Android phone

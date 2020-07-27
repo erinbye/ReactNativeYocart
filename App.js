@@ -3,7 +3,13 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { StatusBar } from "expo-status-bar";
 import React, { Component } from "react";
-import { StyleSheet, Text, View, Button, TouchableOpacity } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  FlatList,
+} from "react-native";
 
 const Stack = createStackNavigator();
 
@@ -47,10 +53,47 @@ function HomePage({ navigation }) {
   );
 }
 
+const DATA = [
+  {
+    id: "0",
+    title: "Milk",
+  },
+  {
+    id: "1",
+    title: "Cereal",
+  },
+];
+
+class List extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      data: props.data,
+    };
+  }
+
+  render() {
+    return (
+      <View style={styles.itemContainer}>
+        <FlatList
+          data={this.state.data}
+          renderItem={({ item }) => (
+            <View>
+              <Text style={styles.itemText}>{item.title}</Text>
+            </View>
+          )}
+          keyExtractor={(item) => item.id}
+        />
+      </View>
+    );
+  }
+}
+
 function GroceryPage({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text>Grocery List</Text>
+      <Text style={styles.subHeaderText}>Grocery List</Text>
+      <List data={DATA} />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </View>
   );
@@ -124,5 +167,21 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontFamily: "Noteworthy",
     color: "#fff",
+  },
+  subHeaderText: {
+    fontSize: 50,
+    marginBottom: 20,
+    fontFamily: "Noteworthy",
+  },
+  itemContainer: {
+    flex: 1,
+    justifyContent: "center",
+    borderRadius: 20,
+    width: 300,
+    borderWidth: 3,
+    padding: 10,
+  },
+  itemText: {
+    fontSize: 30,
   },
 });

@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   FlatList,
 } from "react-native";
+import { groceryList, inventoryList, recipesList } from "./data.json";
 
 const Stack = createStackNavigator();
 
@@ -53,17 +54,6 @@ function HomePage({ navigation }) {
   );
 }
 
-const DATA = [
-  {
-    id: "0",
-    title: "Milk",
-  },
-  {
-    id: "1",
-    title: "Cereal",
-  },
-];
-
 class List extends Component {
   constructor(props) {
     super(props);
@@ -93,7 +83,7 @@ function GroceryPage({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.subHeaderText}>Grocery List</Text>
-      <List data={DATA} />
+      <List data={groceryList} />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </View>
   );
@@ -102,7 +92,8 @@ function GroceryPage({ navigation }) {
 function RecipePage({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text>Recipes</Text>
+      <Text style={styles.subHeaderText}>Recipes</Text>
+      <List data={recipesList} />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </View>
   );
@@ -111,7 +102,8 @@ function RecipePage({ navigation }) {
 function InventoryPage({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text>Inventory</Text>
+      <Text style={styles.subHeaderText}>Inventory</Text>
+      <List data={inventoryList} />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </View>
   );
@@ -120,7 +112,7 @@ function InventoryPage({ navigation }) {
 function SettingsPage({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text>Settings</Text>
+      <Text style={styles.subHeaderText}>Settings</Text>
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </View>
   );

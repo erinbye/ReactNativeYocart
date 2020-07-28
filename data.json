@@ -1,0 +1,29 @@
+{
+  "groceryList": [
+    {
+      "id": "0",
+      "title": "Milk"
+    },
+    {
+      "id": "1",
+      "title": "Cereal"
+    }
+  ],
+
+  "inventoryList": [
+    {
+      "id": "0",
+      "title": "Sugar"
+    },
+    {
+      "id": "1",
+      "title": "Poptarts"
+    }
+  ],
+  "recipesList": [
+    {
+      "id": "0",
+      "title": "Pie"
+    }
+  ]
+}

@@ -9,10 +9,28 @@ import {
   View,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
+  Button,
 } from "react-native";
-import { groceryList, inventoryList, recipesList } from "./data.json";
+import { groceryList, inventoryList } from "./data.json";
 
-const Stack = createStackNavigator();
+async function getRecipes(search) {
+  const url = "https://www.themealdb.com/api/json/v1/1/search.php?s=" + search;
+
+  fetch(url, {
+    method: "GET",
+  })
+    .then((response) => response.json())
+    //If response is in json then in success
+    .then((responseJson) => {
+      console.log(responseJson);
+      return responseJson.meals;
+    })
+    //If response is not in json then in error
+    .catch((error) => {
+      console.error(error);
+    });
+}
 
 class NavButton extends Component {
   constructor(props) {
@@ -79,6 +97,69 @@ class List extends Component {
   }
 }
 
+class RecipesList extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      loading: false,
+      dataSource: [],
+    };
+  }
+
+  goForFetch = () => {
+    this.setState({
+      loading: true,
+    });
+    fetch("https://www.themealdb.com/api/json/v1/1/search.php?s=pie")
+      .then((response) => response.json())
+      .then((responseJson) => {
+        console.log("getting data from fetch", responseJson);
+        setTimeout(() => {
+          this.setState({
+            loading: false,
+            dataSource: responseJson,
+          });
+        }, 2000);
+      })
+      .catch((error) => console.log(error));
+  };
+
+  FlatListSeparator = () => {
+    return (
+      <View
+        style={{
+          height: 0.5,
+          width: "100%",
+          backgroundColor: "rgba(0,0,0,0.5)",
+        }}
+      />
+    );
+  };
+
+  render() {
+    return (
+      <View style={styles.itemContainer}>
+        <Button title="Fetch" onPress={this.goForFetch} />
+        <FlatList
+          data={this.state.dataSource.meals}
+          ItemSeparatorComponent={this.FlatListSeparator}
+          renderItem={(data) => (
+            <View>
+              <Text style={styles.itemText}>{data.item.strMeal}</Text>
+            </View>
+          )}
+          keyExtractor={(item) => item.idMeal.toString()}
+        />
+        {this.state.loading && (
+          <View>
+            <ActivityIndicator size="large" color="#0c9" />
+          </View>
+        )}
+      </View>
+    );
+  }
+}
+
 function GroceryPage({ navigation }) {
   return (
     <View style={styles.container}>
@@ -93,7 +174,7 @@ function RecipePage({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.subHeaderText}>Recipes</Text>
-      <List data={recipesList} />
+      <RecipesList />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </View>
   );
@@ -117,6 +198,8 @@ function SettingsPage({ navigation }) {
     </View>
   );
 }
+
+const Stack = createStackNavigator();
 
 export default function App() {
   return (

@@ -11,26 +11,9 @@ import {
   FlatList,
   ActivityIndicator,
   Button,
+  TextInput,
 } from "react-native";
 import { groceryList, inventoryList } from "./data.json";
-
-async function getRecipes(search) {
-  const url = "https://www.themealdb.com/api/json/v1/1/search.php?s=" + search;
-
-  fetch(url, {
-    method: "GET",
-  })
-    .then((response) => response.json())
-    //If response is in json then in success
-    .then((responseJson) => {
-      console.log(responseJson);
-      return responseJson.meals;
-    })
-    //If response is not in json then in error
-    .catch((error) => {
-      console.error(error);
-    });
-}
 
 class NavButton extends Component {
   constructor(props) {
@@ -103,14 +86,24 @@ class RecipesList extends Component {
     this.state = {
       loading: false,
       dataSource: [],
+      searchText: "",
+      navigation: props.nav,
+      navigateTo: props.navigateTo,
     };
   }
+
+  handleSearch = (text) => {
+    this.setState({ searchText: text });
+  };
 
   goForFetch = () => {
     this.setState({
       loading: true,
     });
-    fetch("https://www.themealdb.com/api/json/v1/1/search.php?s=pie")
+    fetch(
+      "https://www.themealdb.com/api/json/v1/1/search.php?s=" +
+        this.state.searchText
+    )
       .then((response) => response.json())
       .then((responseJson) => {
         console.log("getting data from fetch", responseJson);
@@ -119,7 +112,7 @@ class RecipesList extends Component {
             loading: false,
             dataSource: responseJson,
           });
-        }, 2000);
+        }, 1000);
       })
       .catch((error) => console.log(error));
   };
@@ -138,26 +131,57 @@ class RecipesList extends Component {
 
   render() {
     return (
-      <View style={styles.itemContainer}>
-        <Button title="Fetch" onPress={this.goForFetch} />
-        <FlatList
-          data={this.state.dataSource.meals}
-          ItemSeparatorComponent={this.FlatListSeparator}
-          renderItem={(data) => (
+      <View>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Search"
+            onChangeText={this.handleSearch}
+          />
+          <TouchableOpacity
+            style={styles.fetchButton}
+            onPress={this.goForFetch}
+          >
+            <Text style={styles.fetchButtonText}>Fetch</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.itemContainer}>
+          {this.state.loading && (
             <View>
-              <Text style={styles.itemText}>{data.item.strMeal}</Text>
+              <ActivityIndicator size="small" color="#0c9" />
             </View>
           )}
-          keyExtractor={(item) => item.idMeal.toString()}
-        />
-        {this.state.loading && (
-          <View>
-            <ActivityIndicator size="large" color="#0c9" />
-          </View>
-        )}
+          <FlatList
+            data={this.state.dataSource.meals}
+            ItemSeparatorComponent={this.FlatListSeparator}
+            renderItem={(data) => (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() =>
+                  this.state.navigation.navigate(this.state.navigateTo, {
+                    data: data,
+                  })
+                }
+              >
+                <Text style={styles.itemText}>{data.item.strMeal}</Text>
+              </TouchableOpacity>
+            )}
+            keyExtractor={(item) => item.idMeal.toString()}
+          />
+        </View>
       </View>
     );
   }
+}
+
+function Recipe({ navigation, route }) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.subHeaderText}>{route.params.data.item.strMeal}</Text>
+      <Text>{route.params.data.item.strInstructions}</Text>
+      <NavButton text="Back To Recipes" nav={navigation} navigateTo="Recipes" />
+    </View>
+  );
 }
 
 function GroceryPage({ navigation }) {
@@ -174,7 +198,7 @@ function RecipePage({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.subHeaderText}>Recipes</Text>
-      <RecipesList />
+      <RecipesList nav={navigation} navigateTo="SingleRecipe" />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </View>
   );
@@ -210,6 +234,7 @@ export default function App() {
         <Stack.Screen name="Recipes" component={RecipePage} />
         <Stack.Screen name="Inventory" component={InventoryPage} />
         <Stack.Screen name="Settings" component={SettingsPage} />
+        <Stack.Screen name="SingleRecipe" component={Recipe} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -221,6 +246,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    padding: 20,
   },
   titleText: {
     fontSize: 70,
@@ -249,14 +275,43 @@ const styles = StyleSheet.create({
     fontFamily: "Noteworthy",
   },
   itemContainer: {
-    flex: 1,
     justifyContent: "center",
     borderRadius: 20,
     width: 300,
+    height: 400,
     borderWidth: 3,
     padding: 10,
   },
   itemText: {
     fontSize: 30,
+  },
+  textInput: {
+    fontSize: 30,
+    borderWidth: 3,
+    padding: 10,
+    borderRadius: 20,
+    width: 230,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    width: 300,
+    marginBottom: 5,
+    height: 50,
+  },
+  fetchButton: {
+    elevation: 8,
+    backgroundColor: "#da96e7",
+    borderRadius: 10,
+    height: 50,
+    width: 65,
+    marginLeft: 5,
+    padding: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fetchButtonText: {
+    fontSize: 20,
+    color: "#fff",
   },
 });

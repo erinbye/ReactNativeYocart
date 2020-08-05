@@ -2,7 +2,7 @@ import "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { StatusBar } from "expo-status-bar";
-import React, { Component } from "react";
+import React, { Component, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -13,8 +13,10 @@ import {
   SafeAreaView,
   TextInput,
   ScrollView,
+  Alert,
+  Button,
 } from "react-native";
-import { groceryList, inventoryList } from "./data.json";
+import AsyncStorage from "@react-native-community/async-storage";
 
 class NavButton extends Component {
   constructor(props) {
@@ -26,12 +28,31 @@ class NavButton extends Component {
     };
   }
 
+  onPress = () => {
+    if (this.state.text == "Grocery List") {
+      getData("@groceryList").then((response) =>
+        this.state.navigation.navigate(this.state.navigateTo, {
+          data: response,
+        })
+      );
+    } else if (this.state.text == "Inventory") {
+      getData("@inventoryList").then((response) =>
+        this.state.navigation.navigate(this.state.navigateTo, {
+          data: response,
+        })
+      );
+    } else {
+      this.state.navigation.navigate(this.state.navigateTo);
+    }
+    //clearAll();
+  };
+
   render() {
     return (
       <TouchableOpacity
         activeOpacity={0.8}
         style={styles.navButtonContainer}
-        onPress={() => this.state.navigation.navigate(this.state.navigateTo)}
+        onPress={this.onPress}
       >
         <Text style={styles.navButtonText}>{this.state.text}</Text>
       </TouchableOpacity>
@@ -56,26 +77,215 @@ function HomePage({ navigation }) {
   );
 }
 
+const storeData = async (field, value) => {
+  try {
+    const jsonValue = JSON.stringify(value);
+    await AsyncStorage.setItem(field, jsonValue);
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+const getData = async (field) => {
+  try {
+    const jsonValue = await AsyncStorage.getItem(field);
+    return jsonValue != null ? JSON.parse(jsonValue) : null;
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+const clearAll = async () => {
+  try {
+    await AsyncStorage.clear();
+  } catch (e) {
+    console.log(e);
+  }
+  console.log("Cleared.");
+};
+
 class List extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      typeOfList: props.typeOfList,
       data: props.data,
+      itemToAdd: "",
+      itemAdded: false,
+      refreshing: false,
     };
   }
 
+  handleAdd = (text) => {
+    this.setState({ itemToAdd: text });
+  };
+
+  addItem = () => {
+    this.setState({ refreshing: true });
+
+    getData(this.state.typeOfList).then((response) => {
+      if (response == null) {
+        const start = [
+          {
+            id: "0",
+            title: this.state.itemToAdd,
+          },
+        ];
+        storeData(this.state.typeOfList, start).then(
+          this.setState({ refreshing: false, data: start })
+        );
+      } else {
+        const nextIndex = response.length;
+        let tempObj = {
+          id: nextIndex,
+          title: this.state.itemToAdd,
+        };
+        response.push(tempObj);
+        storeData(this.state.typeOfList, response).then(
+          this.setState({ refreshing: false, data: response })
+        );
+      }
+    });
+  };
+
+  addToGroceryList = (itemObj) => {
+    getData("@groceryList").then((response) => {
+      if (response == null) {
+        const start = [
+          {
+            id: "0",
+            title: itemObj.title,
+          },
+        ];
+        storeData("@groceryList", start);
+      } else {
+        const nextIndex = response.length;
+        let tempObj = {
+          id: nextIndex,
+          title: itemObj.title,
+        };
+        response.push(tempObj);
+        storeData("@groceryList", response);
+      }
+    });
+    this.deleteFromInventory(itemObj);
+  };
+
+  addToInventory = (itemObj) => {
+    getData("@inventoryList").then((response) => {
+      if (response == null) {
+        const start = [
+          {
+            id: "0",
+            title: itemObj.title,
+          },
+        ];
+        storeData("@inventoryList", start);
+      } else {
+        const nextIndex = response.length;
+        let tempObj = {
+          id: nextIndex,
+          title: itemObj.title,
+        };
+        response.push(tempObj);
+        storeData("@inventoryList", response);
+      }
+    });
+    this.deleteFromGroceryList(itemObj);
+  };
+
+  deleteFromGroceryList = (itemObj) => {
+    this.setState({ refreshing: true });
+    getData("@groceryList").then((response) => {
+      response.splice(itemObj.id, 1);
+      storeData("@groceryList", response).then(
+        this.setState({ refreshing: false, data: response })
+      );
+    });
+  };
+
+  deleteFromInventory = (itemObj) => {
+    this.setState({ refreshing: true });
+    getData("@inventoryList").then((response) => {
+      response.splice(itemObj.id, 1);
+      storeData("@inventoryList", response).then(
+        this.setState({ refreshing: false, data: response })
+      );
+    });
+  };
+
+  deleteOnPress = (item) => {
+    if (this.state.typeOfList == "@groceryList") {
+      //ask if want to add to inventory
+      Alert.alert("Delete", "Would you like to add this to your inventory?", [
+        { text: "Yes", onPress: () => this.addToInventory(item) },
+        {
+          text: "No",
+          onPress: () => {
+            Alert.alert("Delete", "Are you sure you want to delete?", [
+              { text: "Yes", onPress: () => this.deleteFromGroceryList(item) },
+              { text: "No" },
+            ]);
+          },
+        },
+      ]);
+    } else if (this.state.typeOfList == "@inventoryList") {
+      //ask if want to add to grocery list
+      Alert.alert(
+        "Delete",
+        "Would you like to add this to your grocery list?",
+        [
+          { text: "Yes", onPress: () => this.addToGroceryList(item) },
+          {
+            text: "No",
+            onPress: () => {
+              Alert.alert("Delete", "Are you sure you want to delete?", [
+                { text: "Yes", onPress: () => this.deleteFromInventory(item) },
+                { text: "No" },
+              ]);
+            },
+          },
+        ]
+      );
+    }
+  };
+
   render() {
     return (
-      <View style={styles.itemContainer}>
-        <FlatList
-          data={this.state.data}
-          renderItem={({ item }) => (
-            <View>
-              <Text style={styles.itemText}>{item.title}</Text>
-            </View>
-          )}
-          keyExtractor={(item) => item.id}
-        />
+      <View style={{ alignItems: "center" }}>
+        <View style={styles.addContainer}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Enter an item"
+            onChangeText={this.handleAdd}
+          />
+          <TouchableOpacity style={styles.addButton} onPress={this.addItem}>
+            <Text style={styles.addEditText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.itemsContainer}>
+          <FlatList
+            data={this.state.data}
+            renderItem={(data) => (
+              <View style={styles.item}>
+                <Text style={styles.itemText}>{data.item.title}</Text>
+                <View style={styles.editDeleteContainer}>
+                  <TouchableOpacity style={styles.editButton}>
+                    <Text style={styles.addEditText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => this.deleteOnPress(data.item)}
+                  >
+                    <Text style={styles.addEditText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            keyExtractor={(item) => item.id.toString()}
+            refreshing={this.state.refreshing}
+          />
+        </View>
       </View>
     );
   }
@@ -146,7 +356,7 @@ class RecipesList extends Component {
             <Text style={styles.fetchButtonText}>Fetch</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.itemContainer}>
+        <View style={styles.itemsContainer}>
           {this.state.loading && (
             <View>
               <ActivityIndicator size="small" color="#0c9" />
@@ -227,6 +437,16 @@ function Recipe({ navigation, route }) {
       ingredient: route.params.data.item.strIngredient10,
       measure: route.params.data.item.strMeasure10,
     },
+    {
+      id: 11,
+      ingredient: route.params.data.item.strIngredient11,
+      measure: route.params.data.item.strMeasure11,
+    },
+    {
+      id: 12,
+      ingredient: route.params.data.item.strIngredient12,
+      measure: route.params.data.item.strMeasure12,
+    },
   ];
   return (
     <SafeAreaView style={styles.container}>
@@ -245,31 +465,25 @@ function Recipe({ navigation, route }) {
           keyExtractor={(item) => item.id}
         />
       </View>
+      <TouchableOpacity style={styles.addRecipeButton}>
+        <Text style={styles.addEditText}>Add to Grocery List</Text>
+      </TouchableOpacity>
       <View style={styles.recipeInfo}>
         <Text style={{ textAlign: "center", fontSize: 30 }}>Instructions</Text>
         <ScrollView>
           <Text>{route.params.data.item.strInstructions}</Text>
         </ScrollView>
       </View>
-
       <NavButton text="Back To Recipes" nav={navigation} navigateTo="Recipes" />
     </SafeAreaView>
   );
 }
 
-function GroceryPage({ navigation }) {
+function GroceryPage({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.subHeaderText}>Grocery List</Text>
-      <View style={styles.addEditContainer}>
-        <TouchableOpacity style={styles.addEditButton}>
-          <Text style={styles.addEditText}>Add</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.addEditButton}>
-          <Text style={styles.addEditText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-      <List data={groceryList} />
+      <List typeOfList="@groceryList" data={route.params.data} />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </SafeAreaView>
   );
@@ -285,19 +499,11 @@ function RecipePage({ navigation }) {
   );
 }
 
-function InventoryPage({ navigation }) {
+function InventoryPage({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.subHeaderText}>Inventory</Text>
-      <View style={styles.addEditContainer}>
-        <TouchableOpacity style={styles.addEditButton}>
-          <Text style={styles.addEditText}>Add</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.addEditButton}>
-          <Text style={styles.addEditText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-      <List data={inventoryList} />
+      <List typeOfList="@inventoryList" data={route.params.data} />
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </SafeAreaView>
   );
@@ -307,6 +513,12 @@ function SettingsPage({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.subHeaderText}>Settings</Text>
+      <TouchableOpacity
+        style={styles.addRecipeButton}
+        onPress={() => clearAll()}
+      >
+        <Text style={styles.addEditText}>Clear All Items</Text>
+      </TouchableOpacity>
       <NavButton text="Back Home" nav={navigation} navigateTo="Home" />
     </SafeAreaView>
   );
@@ -368,7 +580,7 @@ const styles = StyleSheet.create({
     fontFamily: "Noteworthy",
     textAlign: "center",
   },
-  itemContainer: {
+  itemsContainer: {
     justifyContent: "center",
     borderRadius: 20,
     width: 300,
@@ -376,13 +588,17 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     padding: 10,
   },
+  item: {
+    flex: 1,
+    flexDirection: "row",
+  },
   itemText: {
     fontSize: 30,
   },
   textInput: {
     fontSize: 30,
     borderWidth: 3,
-    padding: 10,
+    padding: 5,
     borderRadius: 20,
     width: 230,
   },
@@ -408,7 +624,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "#fff",
   },
-  addEditButton: {
+  addButton: {
     flex: 1,
     elevation: 8,
     backgroundColor: "#da96e7",
@@ -418,7 +634,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     margin: 5,
   },
-  addEditContainer: {
+  editButton: {
+    elevation: 8,
+    backgroundColor: "#da96e7",
+    borderRadius: 10,
+    padding: 5,
+    justifyContent: "center",
+    margin: 2,
+  },
+  editDeleteContainer: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    alignSelf: "flex-end",
+  },
+  addContainer: {
     flexDirection: "row",
     width: 300,
     height: 50,
@@ -428,6 +659,7 @@ const styles = StyleSheet.create({
   addEditText: {
     fontSize: 20,
     color: "#fff",
+    textAlign: "center",
   },
   recipeInfo: {
     flex: 1,
@@ -435,6 +667,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderWidth: 3,
     borderRadius: 5,
+    width: 300,
+  },
+  addRecipeButton: {
+    elevation: 8,
+    backgroundColor: "#da96e7",
+    borderRadius: 10,
+    padding: 5,
+    justifyContent: "center",
+    margin: 2,
     width: 300,
   },
 });

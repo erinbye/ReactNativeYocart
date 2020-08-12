@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ReactNativeYocart",
+    "name": "Yo-Cart!",
     "slug": "ReactNativeYocart",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -21,6 +21,8 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "description": "Easy convenient meal planner and grocery list",
+    "githubUrl": "https://github.com/erinbye/ReactNativeYocart"
   }
 }
